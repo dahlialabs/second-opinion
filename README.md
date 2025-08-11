@@ -60,7 +60,7 @@ Create a `.second-opinion.json` file in your home directory:
   "server_version": "1.0.0",
   "openai": {
     "api_key": "sk-your-openai-api-key",
-    "model": "gpt-4o-mini"
+    "model": "gpt-5"
   },
   "google": {
     "api_key": "your-google-api-key",
@@ -107,7 +107,7 @@ DEFAULT_PROVIDER=openai  # or google, ollama, mistral
 
 # Configure each provider with its own API key and preferred model
 OPENAI_API_KEY=sk-your-openai-api-key
-OPENAI_MODEL=gpt-4o-mini  # or gpt-4o, gpt-4-turbo, gpt-3.5-turbo
+OPENAI_MODEL=gpt-5  # or gpt-5-nano, gpt-5-mini, gpt-5-chat-latest, gpt-4o, gpt-4o-mini, gpt-4-turbo, gpt-3.5-turbo
 
 GOOGLE_API_KEY=your-google-api-key
 GOOGLE_MODEL=gemini-2.0-flash-exp  # or gemini-1.5-flash, gemini-1.5-pro
@@ -159,7 +159,7 @@ Replace `/path/to/second-opinion` with the actual path where you cloned the repo
       "env": {
         "DEFAULT_PROVIDER": "openai",
         "OPENAI_API_KEY": "your-openai-api-key",
-        "OPENAI_MODEL": "gpt-4o-mini",
+        "OPENAI_MODEL": "gpt-5",
         "LLM_TEMPERATURE": "0.3",
         "LLM_MAX_TOKENS": "4096"
       }

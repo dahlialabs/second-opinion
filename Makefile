@@ -144,7 +144,7 @@ mcp-config:
 	@echo '      "env": {' >> mcp-config.json
 	@echo '        "DEFAULT_PROVIDER": "openai",' >> mcp-config.json
 	@echo '        "OPENAI_API_KEY": "your-api-key-here",' >> mcp-config.json
-	@echo '        "OPENAI_MODEL": "gpt-4o-mini"' >> mcp-config.json
+	@echo '        "OPENAI_MODEL": "gpt-5"' >> mcp-config.json
 	@echo '      }' >> mcp-config.json
 	@echo '    }' >> mcp-config.json
 	@echo '  }' >> mcp-config.json

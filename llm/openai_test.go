@@ -45,9 +45,9 @@ func TestNewOpenAIProvider(t *testing.T) {
 				APIKey: "test-key",
 			},
 			expectError: false,
-			expectModel: "gpt-4o-mini",
+			expectModel: "gpt-5",
 			expectTemp:  0,
-			expectMax:   4096,
+			expectMax:   12288, // GPT-5 defaults get tripled for reasoning tokens
 		},
 		{
 			name: "Zero temperature explicitly set",
@@ -56,9 +56,9 @@ func TestNewOpenAIProvider(t *testing.T) {
 				Temperature: 0,
 			},
 			expectError: false,
-			expectModel: "gpt-4o-mini",
+			expectModel: "gpt-5",
 			expectTemp:  0,
-			expectMax:   4096,
+			expectMax:   12288, // GPT-5 defaults get tripled for reasoning tokens
 		},
 	}
 
@@ -94,7 +94,12 @@ func TestOpenAIProvider_isNewGenerationModel(t *testing.T) {
 		expected bool
 	}{
 		{"gpt-4", false},
-		{"gpt-4o-mini", false},
+		{"gpt-4o-mini", true},       // Changed to true - gpt-4o models use max_completion_tokens
+		{"gpt-4o", true},            // Added test case
+		{"gpt-5", true},             // GPT-5 models use max_completion_tokens
+		{"gpt-5-nano", true},        // GPT-5 nano variant
+		{"gpt-5-mini", true},        // GPT-5 mini variant
+		{"gpt-5-chat-latest", true}, // GPT-5 chat latest variant
 		{"o3-mini", true},
 		{"O3-MINI", true},
 		{"o4", true},
@@ -119,6 +124,10 @@ func TestOpenAIProvider_supportsCustomTemperature(t *testing.T) {
 	}{
 		{"gpt-4", true},
 		{"gpt-4o-mini", true},
+		{"gpt-5", false},             // GPT-5 only supports default temperature
+		{"gpt-5-nano", false},        // GPT-5 nano only supports default temperature
+		{"gpt-5-mini", false},        // GPT-5 mini only supports default temperature
+		{"gpt-5-chat-latest", false}, // GPT-5 chat latest only supports default temperature
 		{"o3-mini", false},
 		{"O3", false},
 		{"o4", false},

@@ -114,7 +114,7 @@ func loadEnv() (*Config, error) {
 
 	// Load provider-specific configurations
 	cfg.OpenAI.APIKey = getEnv("OPENAI_API_KEY", "")
-	cfg.OpenAI.Model = getEnv("OPENAI_MODEL", "gpt-4o-mini")
+	cfg.OpenAI.Model = getEnv("OPENAI_MODEL", "gpt-5")
 
 	cfg.Google.APIKey = getEnv("GOOGLE_API_KEY", "")
 	cfg.Google.Model = getEnv("GOOGLE_MODEL", "gemini-2.0-flash-exp")

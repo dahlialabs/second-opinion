@@ -33,7 +33,7 @@ func NewOpenAIProvider(config Config) (*OpenAIProvider, error) {
 
 	model := config.Model
 	if model == "" {
-		model = "gpt-4o-mini"
+		model = "gpt-5"
 	}
 
 	// Use temperature as provided - OpenAI supports 0 temperature for deterministic output
@@ -42,6 +42,18 @@ func NewOpenAIProvider(config Config) (*OpenAIProvider, error) {
 	maxTokens := config.MaxTokens
 	if maxTokens == 0 {
 		maxTokens = 4096
+	}
+
+	// GPT-5 models need extra tokens for reasoning
+	// Increase the token limit for GPT-5 models to account for reasoning tokens
+	modelLower := strings.ToLower(model)
+	if strings.Contains(modelLower, "gpt-5") {
+		// GPT-5 uses reasoning tokens internally, so we need to provide more tokens
+		// to get actual output content
+		maxTokens = maxTokens * 3 // Triple the tokens to account for reasoning
+		if maxTokens > 16384 {
+			maxTokens = 16384 // Cap at a reasonable limit
+		}
 	}
 
 	return &OpenAIProvider{
@@ -54,15 +66,23 @@ func NewOpenAIProvider(config Config) (*OpenAIProvider, error) {
 	}, nil
 }
 
-// isNewGenerationModel checks if the model is o3/o4 series that requires max_completion_tokens and has temperature restrictions
+// isNewGenerationModel checks if the model is o3/o4 series or gpt-4o/gpt-5 models that require max_completion_tokens
 func (p *OpenAIProvider) isNewGenerationModel() bool {
 	modelLower := strings.ToLower(p.model)
-	return strings.Contains(modelLower, "o3") || strings.Contains(modelLower, "o4")
+	return strings.Contains(modelLower, "o3") ||
+		strings.Contains(modelLower, "o4") ||
+		strings.Contains(modelLower, "gpt-4o") ||
+		strings.Contains(modelLower, "gpt-5")
 }
 
 // supportsCustomTemperature checks if the model supports custom temperature values
 func (p *OpenAIProvider) supportsCustomTemperature() bool {
-	return !p.isNewGenerationModel() // o3/o4 models only support default temperature of 1.0
+	modelLower := strings.ToLower(p.model)
+	// o3/o4 and gpt-5 models only support default temperature of 1.0
+	isRestrictedModel := strings.Contains(modelLower, "o3") ||
+		strings.Contains(modelLower, "o4") ||
+		strings.Contains(modelLower, "gpt-5")
+	return !isRestrictedModel
 }
 
 // Analyze sends a prompt to OpenAI and returns the response
@@ -125,6 +145,11 @@ func (p *OpenAIProvider) Analyze(ctx context.Context, prompt string) (string, er
 		return "", fmt.Errorf("OpenAI API error (status %d): %s", resp.StatusCode, string(body))
 	}
 
+	// Debug: Log raw response length
+	if len(body) == 0 {
+		return "", fmt.Errorf("received empty response body from OpenAI")
+	}
+
 	var result struct {
 		Choices []struct {
 			Message struct {
@@ -138,7 +163,8 @@ func (p *OpenAIProvider) Analyze(ctx context.Context, prompt string) (string, er
 	}
 
 	if len(result.Choices) == 0 {
-		return "", fmt.Errorf("no response from OpenAI")
+		// Log the raw response for debugging
+		return "", fmt.Errorf("no response from OpenAI, raw response: %s", string(body))
 	}
 
 	return result.Choices[0].Message.Content, nil
