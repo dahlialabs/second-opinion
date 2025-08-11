@@ -33,7 +33,7 @@ func NewOpenAIProvider(config Config) (*OpenAIProvider, error) {
 
 	model := config.Model
 	if model == "" {
-		model = "gpt-5"
+		model = "gpt-5-mini"
 	}
 
 	// Use temperature as provided - OpenAI supports 0 temperature for deterministic output

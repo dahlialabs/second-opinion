@@ -263,7 +263,7 @@ func TestModelOverride(t *testing.T) {
 		model    string
 	}{
 		{"openai", "gpt-3.5-turbo"},
-		{"openai", "gpt-5"},
+		{"openai", "gpt-5-mini"},
 		{"google", "gemini-2.0-flash-exp"},
 	}
 
