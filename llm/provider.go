@@ -44,6 +44,8 @@ func NewProvider(config Config) (Provider, error) {
 		return NewOllamaProvider(config)
 	case "mistral":
 		return NewMistralProvider(config)
+	case "anthropic":
+		return NewAnthropicProvider(config)
 	default:
 		return nil, fmt.Errorf("unsupported provider: %s", config.Provider)
 	}
@@ -57,16 +59,14 @@ func AnalysisPrompt(analysisType, content string, options map[string]any) string
 		if s, ok := options["summarize"].(bool); ok {
 			summarize = s
 		}
-		prompt := fmt.Sprintf(`Analyze this git diff and provide:
-1. Summary of changes (files changed, lines added/removed)
-2. Type of change (feature, bugfix, refactor, etc.)
-3. Potential issues or concerns
-%s
+		summaryLine := ""
+		if summarize {
+			summaryLine = "\nAfter findings, add a one-line summary of the overall change."
+		}
+		prompt := fmt.Sprintf(`Review this diff for real problems — bugs, logic errors, security issues, broken behavior. Skip cosmetic issues.%s
 
-Git diff:
-%s`,
-			map[bool]string{true: "4. Brief summary of the overall change", false: ""}[summarize],
-			content)
+Diff:
+%s`, summaryLine, content)
 		return prompt
 
 	case "code_review":
@@ -79,27 +79,17 @@ Git diff:
 			language = l
 		}
 
-		prompt := fmt.Sprintf(`Review this %s code with focus on %s. Provide:
-1. Security issues (if any)
-2. Performance concerns (if any)
-3. Code quality and style issues
-4. Best practice violations
-5. Suggestions for improvement
+		prompt := fmt.Sprintf(`Review this %s code (focus: %s). Report only real problems — bugs, security holes, logic errors, broken runtime behavior. If nothing is wrong, say so in one sentence.
 
 Code:
 %s`, language, focus, content)
 		return prompt
 
 	case "commit":
-		prompt := fmt.Sprintf(`Analyze this git commit information:
+		prompt := fmt.Sprintf(`Review this commit for real problems in the changes — bugs, logic errors, security issues. Ignore commit message style.
 
-%s
-
-Provide:
-1. Summary of the commit changes
-2. Quality of the commit message
-3. Whether the commit follows best practices
-4. Suggestions for improvement`, content)
+Commit:
+%s`, content)
 		return prompt
 
 	case "uncommitted_work":
@@ -113,17 +103,10 @@ Provide:
 			changeType = "staged changes"
 		}
 
-		prompt := fmt.Sprintf(`Analyze these %s in the repository:
+		prompt := fmt.Sprintf(`Review these %s for real problems — bugs, logic errors, security issues, incomplete work that would break at runtime. If the changes look correct, say so in one sentence.
 
-%s
-
-Provide:
-1. Summary of all changes (files modified, added, deleted)
-2. Type and nature of changes (feature, bugfix, refactor, etc.)
-3. Completeness and readiness for commit
-4. Potential issues or concerns
-5. Suggested commit message(s) if changes are ready
-6. Recommendations for organizing commits if changes should be split`, changeType, content)
+Changes:
+%s`, changeType, content)
 		return prompt
 
 	default:
@@ -190,14 +173,9 @@ func (w *optimizedProviderWrapper) analyzeInChunks(ctx context.Context, prompt s
 
 	// Combine results with a summary
 	combinedResult := strings.Join(results, "\n\n")
-	summaryPrompt := fmt.Sprintf(`Provide a comprehensive summary of the following analysis parts:
+	summaryPrompt := fmt.Sprintf(`Below are review findings from multiple chunks. Combine them: deduplicate, drop anything self-refuted, and list only confirmed real problems. If no real problems remain, say so in one sentence.
 
-%s
-
-Please provide:
-1. Overall summary of all changes
-2. Key issues and concerns across all parts
-3. Unified recommendations`, combinedResult)
+%s`, combinedResult)
 
 	summary, err := w.analyzeWithOptimization(ctx, summaryPrompt, maxTokens, temperature, providerConfig)
 	if err != nil {

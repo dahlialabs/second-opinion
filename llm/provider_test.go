@@ -206,21 +206,21 @@ func TestAnalysisPrompts(t *testing.T) {
 			analysisType: "diff",
 			content:      "diff --git a/test.go b/test.go\n+func NewFunc() {}\n-func OldFunc() {}",
 			options:      map[string]interface{}{"summarize": true},
-			checkFor:     []string{"changes", "Summary"},
+			checkFor:     []string{"diff", "summary"},
 		},
 		{
 			name:         "Code Review",
 			analysisType: "code_review",
 			content:      "func divide(a, b int) int { return a / b }",
 			options:      map[string]interface{}{"language": "go", "focus": "security"},
-			checkFor:     []string{"Security", "Code"},
+			checkFor:     []string{"security", "go"},
 		},
 		{
 			name:         "Commit Analysis",
 			analysisType: "commit",
 			content:      "commit abc123\nAuthor: Test\nDate: Mon Oct 30\n\nFix: resolve division by zero",
 			options:      nil,
-			checkFor:     []string{"commit", "Summary"},
+			checkFor:     []string{"commit", "Commit"},
 		},
 	}
 
