@@ -17,12 +17,13 @@ const (
 
 // OpenAIProvider implements the Provider interface for OpenAI
 type OpenAIProvider struct {
-	apiKey      string
-	model       string
-	temperature float64
-	maxTokens   int
-	retryConfig RetryConfig
-	httpClient  *http.Client
+	apiKey          string
+	model           string
+	temperature     float64
+	maxTokens       int
+	reasoningEffort string
+	retryConfig     RetryConfig
+	httpClient      *http.Client
 }
 
 // NewOpenAIProvider creates a new OpenAI provider
@@ -57,12 +58,13 @@ func NewOpenAIProvider(config Config) (*OpenAIProvider, error) {
 	}
 
 	return &OpenAIProvider{
-		apiKey:      config.APIKey,
-		model:       model,
-		temperature: temperature,
-		maxTokens:   maxTokens,
-		retryConfig: DefaultRetryConfig(),
-		httpClient:  SharedHTTPClient,
+		apiKey:          config.APIKey,
+		model:           model,
+		temperature:     temperature,
+		maxTokens:       maxTokens,
+		reasoningEffort: config.ReasoningEffort,
+		retryConfig:     DefaultRetryConfig(),
+		httpClient:      SharedHTTPClient,
 	}, nil
 }
 
@@ -112,6 +114,14 @@ func (p *OpenAIProvider) Analyze(ctx context.Context, prompt string) (string, er
 		requestBody["max_completion_tokens"] = p.maxTokens
 	} else {
 		requestBody["max_tokens"] = p.maxTokens
+	}
+
+	// Enable reasoning/thinking mode for models that support it
+	switch p.reasoningEffort {
+	case "minimal", "low", "medium", "high":
+		if p.isNewGenerationModel() {
+			requestBody["reasoning_effort"] = p.reasoningEffort
+		}
 	}
 
 	jsonBody, err := json.Marshal(requestBody)

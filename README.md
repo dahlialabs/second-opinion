@@ -60,7 +60,8 @@ Create a `.second-opinion.json` file in your home directory:
   "server_version": "1.0.0",
   "openai": {
     "api_key": "sk-your-openai-api-key",
-    "model": "gpt-5-mini"
+    "model": "gpt-5.5",
+    "reasoning_effort": "medium"
   },
   "google": {
     "api_key": "your-google-api-key",
@@ -190,6 +191,7 @@ Analyzes git diff output to understand code changes using the configured LLM wit
 - `summarize` (optional): Whether to provide a summary of changes
 - `provider` (optional): LLM provider to use (overrides default)
 - `model` (optional): Model to use (overrides provider default)
+- `reasoning_effort` (optional): OpenAI reasoning depth — `minimal`, `low`, `medium`, `high` (default: from config)
 
 **Smart Optimizations:**
 - **Dynamic Token Allocation**: 4096-32768 tokens based on diff size
@@ -211,6 +213,7 @@ Reviews code for quality, security, and best practices using the configured LLM 
 - `focus` (optional): Specific focus area - `security`, `performance`, `style`, or `all`
 - `provider` (optional): LLM provider to use (overrides default)
 - `model` (optional): Model to use (overrides provider default)
+- `reasoning_effort` (optional): OpenAI reasoning depth — `minimal`, `low`, `medium`, `high` (default: from config)
 
 **Smart Optimizations:**
 - **Task-Specific Temperature**: 0.1 for security focus (high precision), 0.2 for general code review
@@ -230,6 +233,7 @@ Analyzes a git commit for quality and adherence to best practices using the conf
 - `repo_path` (optional): Path to the git repository (default: current directory)
 - `provider` (optional): LLM provider to use (overrides default)
 - `model` (optional): Model to use (overrides provider default)
+- `reasoning_effort` (optional): OpenAI reasoning depth — `minimal`, `low`, `medium`, `high` (default: from config)
 
 **Smart Optimizations:**
 - **Commit Analysis Temperature**: 0.2 for consistent, deterministic commit analysis
@@ -250,6 +254,7 @@ Analyzes uncommitted changes in a git repository to help prepare for commits wit
 - `staged_only` (optional): Analyze only staged changes (default: false, analyzes all uncommitted changes)
 - `provider` (optional): LLM provider to use (overrides default)
 - `model` (optional): Model to use (overrides provider default)
+- `reasoning_effort` (optional): OpenAI reasoning depth — `minimal`, `low`, `medium`, `high` (default: from config)
 
 **Smart Optimizations:**
 - **Code Review Temperature**: 0.2 for balanced analysis of uncommitted changes
@@ -307,6 +312,24 @@ Second Opinion includes a comprehensive optimization system that automatically t
 - **0.2**: Code reviews and commit analysis (mostly deterministic)
 - **0.25**: Diff analysis (slightly flexible)
 - **0.3**: Architecture reviews (allows creativity)
+
+### Reasoning Effort (OpenAI)
+
+For OpenAI models that support reasoning (e.g. `gpt-5.5`, `o3`, `o4-mini`), you can control how much thinking the model does per call:
+
+| Value | Use case | Cost |
+|-------|----------|------|
+| `minimal` | Trivial checks, formatting review | lowest |
+| `low` | Mechanical changes, minor refactors | low |
+| `medium` | Routine code review, plan review (default) | moderate |
+| `high` | Security reviews, architecture analysis, large diffs | higher |
+
+Set a default in `~/.second-opinion.json`:
+```json
+"openai": { "model": "gpt-5.5", "reasoning_effort": "medium" }
+```
+
+Override per call via the `reasoning_effort` tool parameter — Claude Code can choose the level based on task complexity.
 
 ### Provider-Specific Optimizations
 - **OpenAI**: Full token allocation with top_p=0.9

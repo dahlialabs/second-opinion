@@ -25,12 +25,13 @@ type OptimizedProvider interface {
 
 // Config holds configuration for LLM providers
 type Config struct {
-	Provider    string // openai, google, ollama, mistral
-	APIKey      string
-	Model       string
-	Endpoint    string // For Ollama or custom endpoints
-	Temperature float64
-	MaxTokens   int
+	Provider        string // openai, google, ollama, mistral
+	APIKey          string
+	Model           string
+	Endpoint        string // For Ollama or custom endpoints
+	Temperature     float64
+	MaxTokens       int
+	ReasoningEffort string // openai-only: minimal, low, medium, high (empty/"none" = omit)
 }
 
 // NewProvider creates a new LLM provider based on config

@@ -11,10 +11,16 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
+type providerCacheKey struct {
+	Provider        string
+	ModelOverride   string
+	ReasoningEffort string
+}
+
 var (
 	cfg                   *config.Config
-	llmProviders          = make(map[string]llm.Provider)
-	optimizedLLMProviders = make(map[string]llm.OptimizedProvider)
+	llmProviders          = make(map[providerCacheKey]llm.Provider)
+	optimizedLLMProviders = make(map[providerCacheKey]llm.OptimizedProvider)
 	llmProvidersMux       sync.RWMutex
 )
 
@@ -40,6 +46,9 @@ func main() {
 	if cfg.Mistral.APIKey != "" {
 		log.Println("Mistral Enabled")
 	}
+	if cfg.Anthropic.APIKey != "" {
+		log.Println("Anthropic Enabled")
+	}
 	log.Printf("Default provider: %s", cfg.DefaultProvider)
 
 	// Initialize default LLM provider
@@ -59,8 +68,9 @@ func main() {
 	}
 
 	llmProvidersMux.Lock()
-	llmProviders[cfg.DefaultProvider] = defaultProvider
-	optimizedLLMProviders[cfg.DefaultProvider] = llm.NewOptimizedProvider(defaultProvider, cfg)
+	defaultKey := providerCacheKey{cfg.DefaultProvider, "", ""}
+	llmProviders[defaultKey] = defaultProvider
+	optimizedLLMProviders[defaultKey] = llm.NewOptimizedProvider(defaultProvider, cfg)
 	llmProvidersMux.Unlock()
 
 	s := server.NewMCPServer(
@@ -86,6 +96,10 @@ func main() {
 		mcp.WithString("model",
 			mcp.Description("Model to use (overrides default for provider)"),
 		),
+		mcp.WithString("reasoning_effort",
+			mcp.Description("OpenAI reasoning effort level (default: from config)"),
+			mcp.Enum("minimal", "low", "medium", "high"),
+		),
 	)
 	s.AddTool(gitDiffTool, handleGitDiff)
 
@@ -109,6 +123,10 @@ func main() {
 		mcp.WithString("model",
 			mcp.Description("Model to use (overrides default for provider)"),
 		),
+		mcp.WithString("reasoning_effort",
+			mcp.Description("OpenAI reasoning effort level (default: from config)"),
+			mcp.Enum("minimal", "low", "medium", "high"),
+		),
 	)
 	s.AddTool(codeReviewTool, handleCodeReview)
 
@@ -126,6 +144,10 @@ func main() {
 		),
 		mcp.WithString("model",
 			mcp.Description("Model to use (overrides default for provider)"),
+		),
+		mcp.WithString("reasoning_effort",
+			mcp.Description("OpenAI reasoning effort level (default: from config)"),
+			mcp.Enum("minimal", "low", "medium", "high"),
 		),
 	)
 	s.AddTool(commitAnalysisTool, handleCommitAnalysis)
@@ -154,6 +176,10 @@ func main() {
 		mcp.WithString("model",
 			mcp.Description("Model to use (overrides default for provider)"),
 		),
+		mcp.WithString("reasoning_effort",
+			mcp.Description("OpenAI reasoning effort level (default: from config)"),
+			mcp.Enum("minimal", "low", "medium", "high"),
+		),
 	)
 	s.AddTool(uncommittedWorkTool, handleAnalyzeUncommittedWork)
 
@@ -165,19 +191,18 @@ func main() {
 }
 
 // getOrCreateProvider gets an existing provider or creates a new one with the specified config
-func getOrCreateProvider(providerName, modelOverride string) (llm.Provider, error) {
-	// Use default provider if not specified
+func getOrCreateProvider(providerName, modelOverride, reasoningEffort string) (llm.Provider, error) {
 	if providerName == "" {
 		providerName = cfg.DefaultProvider
 	}
 
-	// Create a cache key that includes both provider and model
-	cacheKey := providerName
-	if modelOverride != "" {
-		cacheKey = fmt.Sprintf("%s:%s", providerName, modelOverride)
+	re := reasoningEffort
+	if re == "" {
+		re = cfg.OpenAI.ReasoningEffort
 	}
 
-	// Check if we already have this provider configured
+	cacheKey := providerCacheKey{providerName, modelOverride, re}
+
 	llmProvidersMux.RLock()
 	if provider, exists := llmProviders[cacheKey]; exists {
 		llmProvidersMux.RUnlock()
@@ -185,22 +210,19 @@ func getOrCreateProvider(providerName, modelOverride string) (llm.Provider, erro
 	}
 	llmProvidersMux.RUnlock()
 
-	// Get provider configuration
 	apiKey, model, endpoint := cfg.GetProviderConfig(providerName)
-
-	// Use model override if provided
 	if modelOverride != "" {
 		model = modelOverride
 	}
 
-	// Create new provider
 	providerConfig := llm.Config{
-		Provider:    providerName,
-		APIKey:      apiKey,
-		Model:       model,
-		Endpoint:    endpoint,
-		Temperature: cfg.Temperature,
-		MaxTokens:   cfg.MaxTokens,
+		Provider:        providerName,
+		APIKey:          apiKey,
+		Model:           model,
+		Endpoint:        endpoint,
+		Temperature:     cfg.Temperature,
+		MaxTokens:       cfg.MaxTokens,
+		ReasoningEffort: re,
 	}
 
 	provider, err := llm.NewProvider(providerConfig)
@@ -208,7 +230,6 @@ func getOrCreateProvider(providerName, modelOverride string) (llm.Provider, erro
 		return nil, fmt.Errorf("failed to create %s provider: %w", providerName, err)
 	}
 
-	// Cache the provider with write lock
 	llmProvidersMux.Lock()
 	llmProviders[cacheKey] = provider
 	optimizedLLMProviders[cacheKey] = llm.NewOptimizedProvider(provider, cfg)
@@ -217,19 +238,18 @@ func getOrCreateProvider(providerName, modelOverride string) (llm.Provider, erro
 }
 
 // getOrCreateOptimizedProvider gets or creates an optimized LLM provider
-func getOrCreateOptimizedProvider(providerName, modelOverride string) (llm.OptimizedProvider, error) {
-	// Use default provider if not specified
+func getOrCreateOptimizedProvider(providerName, modelOverride, reasoningEffort string) (llm.OptimizedProvider, error) {
 	if providerName == "" {
 		providerName = cfg.DefaultProvider
 	}
 
-	// Create a cache key that includes both provider and model
-	cacheKey := providerName
-	if modelOverride != "" {
-		cacheKey = fmt.Sprintf("%s:%s", providerName, modelOverride)
+	re := reasoningEffort
+	if re == "" {
+		re = cfg.OpenAI.ReasoningEffort
 	}
 
-	// Check if we already have this optimized provider configured
+	cacheKey := providerCacheKey{providerName, modelOverride, re}
+
 	llmProvidersMux.RLock()
 	if optimizedProvider, exists := optimizedLLMProviders[cacheKey]; exists {
 		llmProvidersMux.RUnlock()
@@ -237,22 +257,18 @@ func getOrCreateOptimizedProvider(providerName, modelOverride string) (llm.Optim
 	}
 	llmProvidersMux.RUnlock()
 
-	// Get or create the base provider first
-	baseProvider, err := getOrCreateProvider(providerName, modelOverride)
+	baseProvider, err := getOrCreateProvider(providerName, modelOverride, reasoningEffort)
 	if err != nil {
 		return nil, err
 	}
 
-	// Create optimized wrapper if not already cached
 	llmProvidersMux.Lock()
 	defer llmProvidersMux.Unlock()
 
-	// Double-check after acquiring write lock
 	if optimizedProvider, exists := optimizedLLMProviders[cacheKey]; exists {
 		return optimizedProvider, nil
 	}
 
-	// Create new optimized provider
 	optimizedProvider := llm.NewOptimizedProvider(baseProvider, cfg)
 	optimizedLLMProviders[cacheKey] = optimizedProvider
 

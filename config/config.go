@@ -27,8 +27,9 @@ type Config struct {
 
 	// Provider-specific configurations
 	OpenAI struct {
-		APIKey string `json:"api_key"`
-		Model  string `json:"model"`
+		APIKey          string `json:"api_key"`
+		Model           string `json:"model"`
+		ReasoningEffort string `json:"reasoning_effort"`
 	} `json:"openai"`
 	Google struct {
 		APIKey string `json:"api_key"`
@@ -42,6 +43,10 @@ type Config struct {
 		APIKey string `json:"api_key"`
 		Model  string `json:"model"`
 	} `json:"mistral"`
+	Anthropic struct {
+		APIKey string `json:"api_key"`
+		Model  string `json:"model"`
+	} `json:"anthropic"`
 
 	// Server settings
 	ServerName    string `json:"server_name"`
@@ -115,6 +120,7 @@ func loadEnv() (*Config, error) {
 	// Load provider-specific configurations
 	cfg.OpenAI.APIKey = getEnv("OPENAI_API_KEY", "")
 	cfg.OpenAI.Model = getEnv("OPENAI_MODEL", "gpt-5-mini")
+	cfg.OpenAI.ReasoningEffort = getEnv("OPENAI_REASONING_EFFORT", "medium")
 
 	cfg.Google.APIKey = getEnv("GOOGLE_API_KEY", "")
 	cfg.Google.Model = getEnv("GOOGLE_MODEL", "gemini-2.5-flash")
@@ -124,6 +130,9 @@ func loadEnv() (*Config, error) {
 
 	cfg.Mistral.APIKey = getEnv("MISTRAL_API_KEY", "")
 	cfg.Mistral.Model = getEnv("MISTRAL_MODEL", "mistral-small-latest")
+
+	cfg.Anthropic.APIKey = getEnv("ANTHROPIC_API_KEY", "")
+	cfg.Anthropic.Model = getEnv("ANTHROPIC_MODEL", "claude-opus-4-20250514")
 
 	// Parse temperature
 	if temp := getEnv("LLM_TEMPERATURE", "0.3"); temp != "" {
@@ -189,6 +198,8 @@ func (c *Config) GetProviderConfig(provider string) (apiKey, model, endpoint str
 		return "", c.Ollama.Model, c.Ollama.Endpoint
 	case "mistral":
 		return c.Mistral.APIKey, c.Mistral.Model, ""
+	case "anthropic":
+		return c.Anthropic.APIKey, c.Anthropic.Model, ""
 	default:
 		// Return config for default provider if different from requested
 		if provider != c.DefaultProvider && c.DefaultProvider != "" {
@@ -293,6 +304,14 @@ func (c *Config) GetProviderOptimizedConfig(provider string, diffSize int, task 
 			"top_p":          0.8,  // Conservative
 			"repeat_penalty": 1.05, // Reduce repetition
 			"num_predict":    maxTokens,
+		}
+
+	case "anthropic":
+		// Anthropic has large context windows, use full allocation
+		maxTokens = baseTokens
+		temperature = baseTemp
+		providerConfig = map[string]any{
+			"top_p": 0.9,
 		}
 
 	default:

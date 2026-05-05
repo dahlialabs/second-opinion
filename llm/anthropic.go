@@ -33,20 +33,25 @@ Engineering principles to enforce:
 
 // AnthropicProvider implements the Provider interface for Anthropic (Claude)
 type AnthropicProvider struct {
-	apiKey      string
-	model       string
-	temperature float64
-	maxTokens   int
-	retryConfig RetryConfig
-	httpClient  *http.Client
+	apiKey       string
+	model        string
+	maxTokens    int
+	budgetTokens int
+	retryConfig  RetryConfig
+	httpClient   *http.Client
+}
+
+type anthropicThinking struct {
+	Type         string `json:"type"`
+	BudgetTokens int    `json:"budget_tokens"`
 }
 
 type anthropicRequest struct {
-	Model       string         `json:"model"`
-	MaxTokens   int            `json:"max_tokens"`
-	Temperature float64        `json:"temperature,omitempty"`
-	System      string         `json:"system"`
-	Messages    []anthropicMsg `json:"messages"`
+	Model    string           `json:"model"`
+	MaxTokens int            `json:"max_tokens"`
+	System   string           `json:"system"`
+	Thinking *anthropicThinking `json:"thinking,omitempty"`
+	Messages []anthropicMsg   `json:"messages"`
 }
 
 type anthropicMsg struct {
@@ -69,33 +74,39 @@ func NewAnthropicProvider(config Config) (*AnthropicProvider, error) {
 
 	model := config.Model
 	if model == "" {
-		model = "claude-opus-4-20250514"
+		model = "claude-opus-4-6-20250610"
 	}
-
-	temperature := config.Temperature
 
 	maxTokens := config.MaxTokens
 	if maxTokens == 0 {
-		maxTokens = 4096
+		maxTokens = 16000
+	}
+
+	budgetTokens := maxTokens * 2 / 3
+	if budgetTokens < 1024 {
+		budgetTokens = 1024
 	}
 
 	return &AnthropicProvider{
-		apiKey:      config.APIKey,
-		model:       model,
-		temperature: temperature,
-		maxTokens:   maxTokens,
-		retryConfig: DefaultRetryConfig(),
-		httpClient:  SharedHTTPClient,
+		apiKey:       config.APIKey,
+		model:        model,
+		maxTokens:    maxTokens,
+		budgetTokens: budgetTokens,
+		retryConfig:  DefaultRetryConfig(),
+		httpClient:   SharedHTTPClient,
 	}, nil
 }
 
 // Analyze sends a prompt to Anthropic and returns the response
 func (p *AnthropicProvider) Analyze(ctx context.Context, prompt string) (string, error) {
 	reqBody := anthropicRequest{
-		Model:       p.model,
-		MaxTokens:   p.maxTokens,
-		Temperature: p.temperature,
-		System:      anthropicSystemPrompt,
+		Model:     p.model,
+		MaxTokens: p.maxTokens,
+		System:    anthropicSystemPrompt,
+		Thinking: &anthropicThinking{
+			Type:         "enabled",
+			BudgetTokens: p.budgetTokens,
+		},
 		Messages: []anthropicMsg{
 			{
 				Role:    "user",

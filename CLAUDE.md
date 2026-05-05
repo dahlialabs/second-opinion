@@ -77,10 +77,11 @@ go run main.go
 The project is an MCP server implementation using the `github.com/mark3labs/mcp-go` library. The architecture consists of:
 
 1. **Main Server** (`main.go`): Initializes the MCP server and registers tool handlers
-2. **Tool Handlers**: Four main tools are implemented:
+2. **Tool Handlers**: Five main tools are implemented:
    - `analyze_git_diff`: Analyzes git diff output with file counts and change statistics
    - `review_code`: Reviews code for security, style, and performance issues
    - `analyze_commit`: Analyzes commits including diff stats and commit message quality
+   - `analyze_uncommitted_work`: Analyzes all uncommitted (or staged-only) changes
    - `get_repo_info`: Provides repository status, branch, and recent commit information
 
 3. **Helper Functions**: Internal functions for diff analysis, code review logic, and git command execution
@@ -90,6 +91,8 @@ When implementing new features:
 2. **Handler Functions**: Implement handlers with signature `func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error)`
 3. **Error Handling**: Use `mcp.NewToolResultError()` for errors and `mcp.NewToolResultText()` for successful responses
 4. **Testing**: Place test files alongside source files with `_test.go` suffix
+5. **Provider parameters**: All 4 analysis tools accept `provider`, `model`, and `reasoning_effort` overrides — follow the same extraction + validation pattern in `handlers.go`
+6. **Cache key**: Provider instances are cached by `providerCacheKey{Provider, ModelOverride, ReasoningEffort}` struct — include all three fields when adding new per-call parameters that affect provider behaviour
 
 ## Linting Configuration
 

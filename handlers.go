@@ -21,19 +21,25 @@ func handleGitDiff(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallT
 		summarize = s
 	}
 
-	// Get provider and model from request
 	providerName := ""
 	if p, ok := request.GetArguments()["provider"].(string); ok {
 		providerName = p
 	}
-
 	modelOverride := ""
 	if m, ok := request.GetArguments()["model"].(string); ok {
 		modelOverride = m
 	}
+	reasoningEffort := ""
+	if r, ok := request.GetArguments()["reasoning_effort"].(string); ok {
+		reasoningEffort = r
+	}
+	switch reasoningEffort {
+	case "", "minimal", "low", "medium", "high":
+	default:
+		return mcp.NewToolResultError(fmt.Sprintf("invalid reasoning_effort %q", reasoningEffort)), nil
+	}
 
-	// Get or create the appropriate optimized provider
-	optimizedProvider, err := getOrCreateOptimizedProvider(providerName, modelOverride)
+	optimizedProvider, err := getOrCreateOptimizedProvider(providerName, modelOverride, reasoningEffort)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
@@ -70,19 +76,25 @@ func handleCodeReview(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 		focus = f
 	}
 
-	// Get provider and model from request
 	providerName := ""
 	if p, ok := request.GetArguments()["provider"].(string); ok {
 		providerName = p
 	}
-
 	modelOverride := ""
 	if m, ok := request.GetArguments()["model"].(string); ok {
 		modelOverride = m
 	}
+	reasoningEffort := ""
+	if r, ok := request.GetArguments()["reasoning_effort"].(string); ok {
+		reasoningEffort = r
+	}
+	switch reasoningEffort {
+	case "", "minimal", "low", "medium", "high":
+	default:
+		return mcp.NewToolResultError(fmt.Sprintf("invalid reasoning_effort %q", reasoningEffort)), nil
+	}
 
-	// Get or create the appropriate optimized provider
-	optimizedProvider, err := getOrCreateOptimizedProvider(providerName, modelOverride)
+	optimizedProvider, err := getOrCreateOptimizedProvider(providerName, modelOverride, reasoningEffort)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
@@ -147,19 +159,25 @@ func handleCommitAnalysis(ctx context.Context, request mcp.CallToolRequest) (*mc
 		return mcp.NewToolResultError(fmt.Sprintf("Invalid repository path: %v", err)), nil
 	}
 
-	// Get provider and model from request
 	providerName := ""
 	if p, ok := request.GetArguments()["provider"].(string); ok {
 		providerName = p
 	}
-
 	modelOverride := ""
 	if m, ok := request.GetArguments()["model"].(string); ok {
 		modelOverride = m
 	}
+	reasoningEffort := ""
+	if r, ok := request.GetArguments()["reasoning_effort"].(string); ok {
+		reasoningEffort = r
+	}
+	switch reasoningEffort {
+	case "", "minimal", "low", "medium", "high":
+	default:
+		return mcp.NewToolResultError(fmt.Sprintf("invalid reasoning_effort %q", reasoningEffort)), nil
+	}
 
-	// Get or create the appropriate optimized provider
-	optimizedProvider, err := getOrCreateOptimizedProvider(providerName, modelOverride)
+	optimizedProvider, err := getOrCreateOptimizedProvider(providerName, modelOverride, reasoningEffort)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
@@ -298,19 +316,25 @@ func handleAnalyzeUncommittedWork(ctx context.Context, request mcp.CallToolReque
 		stagedOnly = staged
 	}
 
-	// Get provider and model from request
 	providerName := ""
 	if p, ok := request.GetArguments()["provider"].(string); ok {
 		providerName = p
 	}
-
 	modelOverride := ""
 	if m, ok := request.GetArguments()["model"].(string); ok {
 		modelOverride = m
 	}
+	reasoningEffort := ""
+	if r, ok := request.GetArguments()["reasoning_effort"].(string); ok {
+		reasoningEffort = r
+	}
+	switch reasoningEffort {
+	case "", "minimal", "low", "medium", "high":
+	default:
+		return mcp.NewToolResultError(fmt.Sprintf("invalid reasoning_effort %q", reasoningEffort)), nil
+	}
 
-	// Get or create the appropriate optimized provider
-	optimizedProvider, err := getOrCreateOptimizedProvider(providerName, modelOverride)
+	optimizedProvider, err := getOrCreateOptimizedProvider(providerName, modelOverride, reasoningEffort)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
