@@ -13,39 +13,71 @@ Claude reads `CLAUDE.md` at the start of every session and treats it as binding 
 
 ---
 
-## Prerequisites
+## Step 1 — Build the binary
 
-1. `second-opinion` MCP server installed and registered in `~/.claude.json`:
-   ```json
-   {
-     "mcpServers": {
-       "second-opinion": {
-         "type": "stdio",
-         "command": "/path/to/second-opinion/bin/second-opinion"
-       }
-     }
-   }
-   ```
+Requirements: Go 1.20+, Git.
 
-2. `~/.second-opinion.json` configured with your OpenAI key and preferred defaults:
-   ```json
-   {
-     "default_provider": "openai",
-     "temperature": 0.3,
-     "max_tokens": 4096,
-     "openai": {
-       "api_key": "sk-...",
-       "model": "gpt-5.5",
-       "reasoning_effort": "medium"
-     }
-   }
-   ```
+```bash
+git clone https://github.com/dahlialabs/second-opinion.git
+cd second-opinion
+go build -o bin/second-opinion .
+```
+
+Note the full path to the binary — you'll need it in the next step:
+
+```bash
+pwd  # e.g. /Users/yourname/second-opinion
+```
 
 ---
 
-## Global CLAUDE.md template
+## Step 2 — Register the MCP server with Claude Code
 
-Place this at `~/.claude/CLAUDE.md` to enforce the reviewer in **every** Claude Code session:
+Add the server to `~/.claude.json` (create the file if it doesn't exist):
+
+```json
+{
+  "mcpServers": {
+    "second-opinion": {
+      "type": "stdio",
+      "command": "/Users/yourname/second-opinion/bin/second-opinion"
+    }
+  }
+}
+```
+
+Replace `/Users/yourname/second-opinion` with the actual path from Step 1.
+
+Restart Claude Code after saving — the `second-opinion` tools will appear automatically.
+
+---
+
+## Step 3 — Configure your API key and model
+
+Create `~/.second-opinion.json`:
+
+```json
+{
+  "default_provider": "openai",
+  "temperature": 0.3,
+  "max_tokens": 4096,
+  "openai": {
+    "api_key": "sk-your-openai-api-key",
+    "model": "gpt-5.5",
+    "reasoning_effort": "medium"
+  }
+}
+```
+
+This is the fallback config. Per-call `reasoning_effort` overrides always take precedence.
+
+---
+
+## Step 4 — Add instructions to Claude via CLAUDE.md
+
+### Global template (enforces reviewer in every session)
+
+Place this at `~/.claude/CLAUDE.md`:
 
 ```markdown
 ## Second-Opinion Code Review Requirement
@@ -81,12 +113,9 @@ Choose `reasoning_effort` based on the task:
 - File reads, searches, grep, or any exploration with no code changes
 ```
 
----
+### Per-project template (stricter rules for sensitive codebases)
 
-## Per-project CLAUDE.md template
-
-Place this at `<your-repo>/CLAUDE.md` to enforce the reviewer only for a specific project.
-Useful when you want stricter rules (e.g. always `"high"` effort) for sensitive codebases:
+Place this at `<your-repo>/CLAUDE.md`:
 
 ```markdown
 ## Code Review Gate
@@ -133,4 +162,7 @@ After placing your `CLAUDE.md`, start a new Claude Code session and ask it to ma
 2. Write the code
 3. Call `analyze_uncommitted_work` (or `review_code` with the diff) before suggesting a commit
 
-If Claude skips either step, check that your `CLAUDE.md` is in the right location and that the `second-opinion` MCP server is listed in `~/.claude.json`.
+If Claude skips either step, check that:
+- Your `CLAUDE.md` is in the right location (`~/.claude/CLAUDE.md` for global, or at the repo root)
+- The `second-opinion` server appears under `mcpServers` in `~/.claude.json`
+- Claude Code was restarted after editing `~/.claude.json`
